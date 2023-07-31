@@ -12,7 +12,7 @@ import { GraphQLError } from "graphql";
   const app = express();
 
   const corsOptions = {
-    origin: "https://alzheimer-care.netlify.app",
+    origin: "https://alzheimer-care.netlify.app/",
     credentials: true,
   };
 
@@ -51,7 +51,5 @@ import { GraphQLError } from "graphql";
 
   await server.applyMiddleware({ app, path: "/graphql", cors: false });
 
-  app.listen({ port: 4000 }, () => {
-    console.log("🚀 Server is up at http://localhost:4000" + server.graphqlPath);
-  });
+  app.listen({ port: 4000 }, () => {});
 })();
