@@ -12,11 +12,7 @@ import { GraphQLError } from "graphql";
   const app = express();
 
   const corsOptions = {
-    origin: [
-      "http://192.168.1.46:5173",
-      "https://studio.apollographql.com",
-      "http://localhost:5173",
-    ],
+    origin: ["https://alzheimer-care.netlify.app/"],
     credentials: true,
   };
 
