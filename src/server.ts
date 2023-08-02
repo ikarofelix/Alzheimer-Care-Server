@@ -51,5 +51,7 @@ import { GraphQLError } from "graphql";
 
   await server.applyMiddleware({ app, path: "/graphql", cors: true });
 
-  app.listen({ port: 4000 }, () => {});
+  app.listen({ port: 4000 }, () => {
+    console.log(`Server is running on http://localhost:4000/graphql`);
+  });
 })();
