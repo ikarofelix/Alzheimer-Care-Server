@@ -71,6 +71,7 @@ export const resolvers = {
 
         res.cookie("accessToken", accessToken, {
           maxAge: day,
+          sameSite: "none",
           httpOnly: true,
           secure: true,
         });
@@ -78,6 +79,19 @@ export const resolvers = {
         return true;
       } catch (err) {
         throw new Error((err as Error).message);
+      }
+    },
+
+    logUserOut: (_: unknown, __: unknown, { res }: MyContext) => {
+      try {
+        res.clearCookie("accessToken", {
+          sameSite: "none",
+          httpOnly: true,
+          secure: true,
+        });
+        return true;
+      } catch (err) {
+        return false;
       }
     },
   },
