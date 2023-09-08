@@ -127,9 +127,8 @@ export const typeDefs = gql`
   }
 
   type Query {
-    user: User!
-    authenticate(user: UserGoogle!): Boolean!
-    logUserOut: Boolean!
+    user(userToken: String!): User!
+    authenticate(user: UserGoogle!): String!
   }
 
   type Mutation {
