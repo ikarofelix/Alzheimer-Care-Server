@@ -1,11 +1,12 @@
 import mysqlServer from "../config/mysql";
-import { sign } from "jsonwebtoken";
+import { sign, verify } from "jsonwebtoken";
 import { JWT_SECRET_KEY } from "../jwt";
 
 import { CreateResult, MyContext, UserInfo, ValueInterface } from "../types/types";
 import { RowDataPacket } from "mysql2";
 
 import { QueryError } from "mysql2";
+import { GraphQLError } from "graphql";
 
 /**
  * Retrieves the values from a specific column for a given user.
@@ -35,23 +36,45 @@ export const resolvers = {
      * @returns {Promise<User>} - A promise that resolves to an object representing the inserted user's details.
      * @throws {Error} - Throws an error if an error occurs during the user insertion process.
      */
-    user: async (_: unknown, __: unknown, { user }: { user: UserInfo }): Promise<RowDataPacket> => {
-      const { uid, displayName, email } = user;
-      try {
-        await mysqlServer.query(
-          `INSERT INTO users(id, name, email, emergency_card, bpm_card, 
-          communication_card, event_card, medicine_card, professional_card, exercise_card) 
-          VALUES(?, ?, ?, "[]", "[]", "[]", "[]", "[]", "[]", "[]")`,
-          [uid, displayName, email]
-        );
-      } catch (_) {
-        throw new Error("Occurred an error in retrieving user data");
-      } finally {
-        const [rows] = await mysqlServer.query<RowDataPacket[]>(
-          "SELECT * FROM users WHERE id = ?",
-          uid
-        );
-        return rows[0];
+    user: async (
+      _: unknown,
+      { userToken }: { userToken: string },
+      { res }: MyContext
+    ): Promise<any> => {
+      if (userToken) {
+        try {
+          const { data: user }: any = verify(userToken, JWT_SECRET_KEY) as {
+            data: string;
+            iat: number;
+          };
+
+          const { uid, displayName, email } = user;
+
+          try {
+            await mysqlServer.query(
+              `INSERT INTO users(id, name, email, emergency_card, bpm_card,
+                communication_card, event_card, medicine_card, professional_card, exercise_card)
+                VALUES(?, ?, ?, "[]", "[]", "[]", "[]", "[]", "[]", "[]")`,
+              [uid, displayName, email]
+            );
+          } catch (_) {
+            throw new Error("Occurred an error in retrieving user data");
+          } finally {
+            const [rows] = await mysqlServer.query<RowDataPacket[]>(
+              "SELECT * FROM users WHERE id = ?",
+              uid
+            );
+            return rows[0];
+          }
+        } catch (err) {
+          res.clearCookie("accessToken");
+          throw new GraphQLError("User is not authenticated", {
+            extensions: {
+              code: "UNAUTHENTICATED",
+              http: { status: 401 },
+            },
+          });
+        }
       }
     },
 
@@ -62,36 +85,13 @@ export const resolvers = {
      * @param {object} res - The response object used to set the cookie.
      * @returns {Boolean} - Returns true if the access token is created and saved in the cookie successfully, false otherwise.
      */
-    authenticate: (_: unknown, { user }: { user: UserInfo }, { res }: MyContext): Boolean => {
+    authenticate: (_: unknown, { user }: { user: UserInfo }, { res }: MyContext): string => {
       try {
         const accessToken = sign({ data: user }, JWT_SECRET_KEY);
 
-        const day = 60 * 60 * 24 * 1000;
-        const month = 60 * 60 * 24 * 30 * 1000;
-
-        res.cookie("accessToken", accessToken, {
-          maxAge: day,
-          sameSite: "none",
-          httpOnly: true,
-          secure: true,
-        });
-
-        return true;
+        return accessToken;
       } catch (err) {
         throw new Error((err as Error).message);
-      }
-    },
-
-    logUserOut: (_: unknown, __: unknown, { res }: MyContext) => {
-      try {
-        res.clearCookie("accessToken", {
-          sameSite: "none",
-          httpOnly: true,
-          secure: true,
-        });
-        return true;
-      } catch (err) {
-        return false;
       }
     },
   },
